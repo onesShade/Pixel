@@ -23,7 +23,7 @@ void InstrumentPannel::fillInstumentIcon()
 {
     instrument_icon[InstumentType::HAND] = {QIcon(":/application_icon/main_icon.jpg"), QString("Hand (H)")};
     instrument_icon[InstumentType::PENCIL] = {QIcon(":/application_icon/main_icon.jpg"), QString("Pencil (P)")};
-    instrument_icon[InstumentType::RUBBER] = {QIcon(":/application_icon/rubber.png"), QString("Eraser (E)")};
+    instrument_icon[InstumentType::ERASER] = {QIcon(":/application_icon/rubber.png"), QString("Eraser (E)")};
     instrument_icon[InstumentType::SCISSORS] = {QIcon(":/application_icon/scissors.jpg"), QString("Scissors ()")};
     instrument_icon[InstumentType::FILL] = {QIcon(":/application_icon/main_icon.jpg"), QString("Fill (B)")};
     instrument_icon[InstumentType::POINTER] = {QIcon(":/application_icon/main_icon.jpg"), QString("Pointer (I)")};
@@ -44,7 +44,7 @@ void InstrumentPannel::setButtonsIcons()
 {
     for(size_t i = 0; i < bttns_instruments.size(); i++)
     {
-        InstumentType type = InstumentType::RUBBER;
+        InstumentType type = InstumentType::ERASER;
         bttns_instruments[i]->setIcon(instrument_icon[static_cast<InstumentType>(static_cast<int>(type) + i)].first);
         bttns_instruments[i]->setToolTip(instrument_icon[static_cast<InstumentType>(static_cast<int>(type) + i)].second);
     }
