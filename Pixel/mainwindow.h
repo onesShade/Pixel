@@ -7,9 +7,12 @@
 #include <QPushButton>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include <QGraphicsItem>
 
 #include "infopannel.h"
 #include "contextpannel.h"
+
+#include "object.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
