@@ -30,7 +30,7 @@ public:
 
 private:
     void renderCanvas();
-
+    void createMenuBar();
     Ui::MainWindow *ui;
 
     QGraphicsScene* m_scene_main;
