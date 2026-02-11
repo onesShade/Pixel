@@ -11,6 +11,7 @@
 
 #include "infopannel.h"
 #include "contextpannel.h"
+#include "instrumentpannel.h"
 
 #include "object.h"
 
@@ -33,5 +34,6 @@ private:
     QGraphicsView* view_main;
     InfoPannel* info_pannel_layout;
     ContextPannel* context_pannel_layout;
+    InstrumentPannel* instrument_pannel_layout;
 };
 #endif // MAINWINDOW_H

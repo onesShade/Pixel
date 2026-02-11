@@ -19,6 +19,7 @@ SOURCES += \
     action.cpp \
     contextpannel.cpp \
     infopannel.cpp \
+    instrumentpannel.cpp \
     main.cpp \
     mainwindow.cpp \
     projectmanager.cpp
@@ -29,6 +30,7 @@ HEADERS += \
     contextpannel.h \
     infopannel.h \
     layer.h \
+    instrumentpannel.h \
     mainwindow.h \
     object.h \
     project.h \
