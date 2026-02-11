@@ -12,6 +12,7 @@
 #include "infopannel.h"
 #include "contextpannel.h"
 #include "instrumentpannel.h"
+#include "palettepannel.h"
 
 #include "canvas.h"
 
@@ -32,7 +33,7 @@ public:
 
 private:
     void renderCanvas();
-
+    void createMenuBar();
     Ui::MainWindow *ui;
 
     QGraphicsScene* m_scene_main;
@@ -42,5 +43,6 @@ private:
     InstrumentPannel* m_instrument_pannel_layout;
 
     Canvas* m_canvas;
+    PalettePannel* m_palette_pannel_layout;
 };
 #endif // MAINWINDOW_H

@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "layer.h"
 #include "object.h"
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -11,6 +12,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    createMenuBar();
+;
     // start main container config
     QWidget* container_main = new QWidget(this);
     QVBoxLayout* container_layout = new QVBoxLayout(container_main);
@@ -19,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     // start 1
     QWidget* context_pannel = new QWidget(container_main);
     m_context_pannel_layout = new ContextPannel(context_pannel);
+ qDebug() << "Meh";
     context_pannel->setStyleSheet("border: 2px solid #ff0000; border-radius: 5px;");
     // end 1
 
@@ -30,7 +34,6 @@ MainWindow::MainWindow(QWidget *parent)
     //
     QWidget* instrument_pannel = new QWidget(workspace);
     m_instrument_pannel_layout = new InstrumentPannel(instrument_pannel);
-
     instrument_pannel->setStyleSheet("border: 2px solid #ffff00; border-radius: 5px;");
     //
 
@@ -45,7 +48,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     //
     QWidget* palette_layers_pannel = new QWidget(workspace);
-   // palette_layers_pannel->setMaximumWidth(260);
     QVBoxLayout* palette_layers_pannel_layout = new QVBoxLayout(palette_layers_pannel);
     palette_layers_pannel->setStyleSheet("border: 2px solid #f3003f; border-radius: 5px;");
 
@@ -55,10 +57,8 @@ MainWindow::MainWindow(QWidget *parent)
     layers_pannel_layout->addWidget(filler_button3);
     layers_pannel->setStyleSheet("border: 2px solid #ff00ff; border-radius: 5px;");
 
-    QWidget* palette_pannel = new QWidget(workspace);
-    QVBoxLayout* palette_pannel_layout = new QVBoxLayout(palette_pannel);
-    QPushButton* filler_button5 = new QPushButton( "Filler button ", palette_pannel);
-    palette_pannel_layout->addWidget(filler_button5);
+    PalettePannel* palette_pannel = new PalettePannel(workspace);
+    m_palette_pannel_layout = new PalettePannel(palette_pannel);
     palette_pannel->setStyleSheet("border: 2px solid #f0400f; border-radius: 5px;");
 
     palette_layers_pannel_layout->addWidget(palette_pannel, 6);
@@ -87,7 +87,7 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(container_main);
 
     {
-        m_canvas = new Canvas(this);
+        m_canvas = new Canvas();
 
         Layer* layer1 = new Layer(m_canvas);
         Layer* layer2 = new Layer(m_canvas);
@@ -103,6 +103,33 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     renderCanvas();
+
+}
+
+void MainWindow::createMenuBar()
+{
+    QMenuBar* menu_bar = this->menuBar();
+
+    QMenu* file_menu = menu_bar->addMenu("&File");
+    file_menu->addAction("&Create file or project");
+    file_menu->addAction("&Open file or project");
+    file_menu->addAction("&Save project");
+    file_menu->addAction("&Save project as");
+    file_menu->addAction("&Close project");
+    file_menu->addAction("&Print");
+
+    QMenu* edit_menu = menu_bar->addMenu("&Edit");
+    edit_menu->addAction("&Undo");
+    edit_menu->addAction("&Redo");
+    edit_menu->addAction("&Copy");
+    edit_menu->addAction("&Paste");
+    edit_menu->addAction("&Search");
+
+    QMenu* view_menu = menu_bar->addMenu("&View");
+    view_menu->addAction("&Me cant see");
+
+    QMenu* help_menu = menu_bar->addMenu("&Help");
+    help_menu->addAction("&Sos me die");
 }
 
 void MainWindow::renderCanvas()
