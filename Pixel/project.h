@@ -4,7 +4,7 @@
 #include <QObject>
 #include <vector>
 
-#include "layer.h"
+#include "canvas.h"
 
 
 class Project : public QObject
@@ -15,8 +15,7 @@ public:
     Project();
 
 private:
-    std::vector<Layer*> m_layers;
-    Layer* m_selected;
+    Canvas* m_canvas;
 };
 
 #endif // PROJECT_H

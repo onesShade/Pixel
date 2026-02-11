@@ -16,8 +16,8 @@ public:
     const QHBoxLayout& getLayout() const;
 
 private:
-    QMenuBar* menu_bar;
-    QHBoxLayout* context_pannel_layout;
+    QMenuBar* m_menu_bar;
+    QHBoxLayout* m_context_pannel_layout;
 };
 
 #endif // CONTEXTPANNEL_H

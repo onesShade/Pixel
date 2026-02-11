@@ -4,8 +4,8 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , scene_main(new QGraphicsScene(this))
-    , view_main(new QGraphicsView(this))
+    , m_scene_main(new QGraphicsScene(this))
+    , m_view_main(new QGraphicsView(this))
 {
     ui->setupUi(this);
 
@@ -16,7 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // start 1
     QWidget* context_pannel = new QWidget(container_main);
-    context_pannel_layout = new ContextPannel(context_pannel);
+    m_context_pannel_layout = new ContextPannel(context_pannel);
     context_pannel->setStyleSheet("border: 2px solid #ff0000; border-radius: 5px;");
     // end 1
 
@@ -28,7 +28,7 @@ MainWindow::MainWindow(QWidget *parent)
     //
     QWidget* instrument_pannel = new QWidget(workspace);
     //QVBoxLayout* instrument_pannel_layout = new QVBoxLayout(instrument_pannel);
-    instrument_pannel_layout = new InstrumentPannel(instrument_pannel);
+    m_instrument_pannel_layout = new InstrumentPannel(instrument_pannel);
    // QPushButton* filler_button2 = new QPushButton( "Filler button ",instrument_pannel);
     //filler_button2->setFixedSize(20,20);
     //instrument_pannel_layout->addWidget(filler_button2);
@@ -36,12 +36,12 @@ MainWindow::MainWindow(QWidget *parent)
     //
 
     //
-    scene_main->setSceneRect(QRect(this->width()/ 7,this->height()/ 9,4 * this->width()/ 7,7* this->height()/ 9));
-    scene_main->addRect(scene_main->sceneRect());
+    m_scene_main->setSceneRect(QRect(this->width()/ 7,this->height()/ 9,4 * this->width()/ 7,7* this->height()/ 9));
+    m_scene_main->addRect(m_scene_main->sceneRect());
 
-    view_main->setScene(scene_main);
-    view_main->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
-    view_main->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
+    m_view_main->setScene(m_scene_main);
+    m_view_main->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
+    m_view_main->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
     //
 
     //
@@ -68,14 +68,14 @@ MainWindow::MainWindow(QWidget *parent)
 
     //
     workspace_layout->addWidget(instrument_pannel);
-    workspace_layout->addWidget(view_main, 4);
+    workspace_layout->addWidget(m_view_main, 4);
     workspace_layout->addWidget(palette_layers_pannel, 2);
 
     // end 2
 
     // start 3
     QWidget* info_pannel = new QWidget(container_main);
-    info_pannel_layout = new InfoPannel({scene_main->width(),scene_main->height()}, 1.0f, info_pannel);
+    m_info_pannel_layout = new InfoPannel({m_scene_main->width(),m_scene_main->height()}, 1.0f, info_pannel);
     info_pannel->setStyleSheet("border: 2px solid #00ffff; border-radius: 5px;");
     // end 3
 
