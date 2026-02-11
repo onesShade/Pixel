@@ -7,9 +7,9 @@
 #include <QString>
 #include <unordered_map>
 
-enum class InstumentType
+enum class InstrumentType
 {
-    RUBBER,
+    ERASER,
     PENCIL,
     POINTER,
     SCISSORS,
@@ -32,10 +32,10 @@ private:
     void addInsruments();
 
     static constexpr int MAX_INSTRUMENTS_AMOUNT = 32;
-    QVBoxLayout* instrument_pannel_layout;
+    QVBoxLayout* m_instrument_pannel_layout;
 
-    std::vector<QPushButton*> bttns_instruments;
-    std::unordered_map<InstumentType,std::pair<QIcon,QString>> instrument_icon;
+    std::vector<QPushButton*> m_bttns_instruments;
+    std::unordered_map<InstrumentType,std::pair<QIcon,QString>> m_instrument_icon;
 };
 
 #endif // INSTRUMENTPANNEL_H

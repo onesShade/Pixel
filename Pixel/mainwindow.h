@@ -30,10 +30,10 @@ public:
 private:
     Ui::MainWindow *ui;
 
-    QGraphicsScene* scene_main;
-    QGraphicsView* view_main;
-    InfoPannel* info_pannel_layout;
-    ContextPannel* context_pannel_layout;
-    InstrumentPannel* instrument_pannel_layout;
+    QGraphicsScene* m_scene_main;
+    QGraphicsView* m_view_main;
+    InfoPannel* m_info_pannel_layout;
+    ContextPannel* m_context_pannel_layout;
+    InstrumentPannel* m_instrument_pannel_layout;
 };
 #endif // MAINWINDOW_H

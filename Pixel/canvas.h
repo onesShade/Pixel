@@ -6,6 +6,8 @@
 #include <QWidget>
 #include <QPaintEvent>
 
+#include "layer.h"
+
 class Canvas : public QWidget
 {
     Q_OBJECT
@@ -15,6 +17,8 @@ public:
     void draw(QPainter* painter) const;
 
 private:
+    std::vector<Layer*> m_layers;
+    Layer* m_selected;
 
 public slots:
     void paintEvent(QPaintEvent* event) const {};
