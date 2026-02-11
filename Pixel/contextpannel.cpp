@@ -3,7 +3,7 @@
 ContextPannel::ContextPannel(QWidget* parent)
 {
     m_context_pannel_layout = new QHBoxLayout(parent);
-    m_context_pannel_layout->setContentsMargins(0,0,0,0);
+    m_context_pannel_layout->setContentsMargins(0, 0, 0, 0);
 
     m_menu_bar = new QMenuBar(parent);
 
@@ -28,9 +28,7 @@ ContextPannel::ContextPannel(QWidget* parent)
     QMenu* help_menu = m_menu_bar->addMenu("&Help");
     help_menu->addAction("&Sos me die");
 
-
     m_context_pannel_layout->addWidget(m_menu_bar,1);
-
 }
 
 const QHBoxLayout& ContextPannel::getLayout() const
