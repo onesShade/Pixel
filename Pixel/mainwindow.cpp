@@ -102,9 +102,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(container_main);
 
-
-
-
 }
 
 void MainWindow::createMenuBar()
@@ -142,18 +139,21 @@ void MainWindow::renderCanvas()
 
     QPainter painter(&buffer);
 
-
-    if (m_canvas) {
+    if (m_canvas)
         m_canvas->draw(&painter);
-    }
+
     painter.end();
 
     m_scene_main->clear();
     m_scene_main->addPixmap(buffer);
 }
 
+void MainWindow::onForceUpdateCanvas()
+{
+    renderCanvas();
+}
+
 MainWindow::~MainWindow()
 {
     delete ui;
 }
-

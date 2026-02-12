@@ -37,6 +37,7 @@ private:
     QPushButton* m_delete_btn;
     QLabel* m_layer_name;
     int m_index;
+
 signals:
     void deleteClicked();
 
@@ -65,6 +66,7 @@ signals:
 
 private slots:
     void onLayerDeleteClicked();
+    void onNewLayerClicked();
 };
 
 #endif // LAYERSPANNEL_H

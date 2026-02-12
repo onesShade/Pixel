@@ -57,6 +57,7 @@ LayersPannel::LayersPannel(QWidget *parent, Canvas* canvas)
     m_main_layout->addWidget(m_new_layer_btn);
 
     updateLayers();
+    connect(m_new_layer_btn, &QPushButton::clicked, this, &LayersPannel::onNewLayerClicked);
 }
 
 void LayersPannel::updateLayers()
@@ -95,4 +96,10 @@ void LayersPannel::onLayerDeleteClicked()
         m_canvas_ptr->deleteLayer(sender_layer->getIndex());
         updateLayers();
     }
+}
+
+void LayersPannel::onNewLayerClicked()
+{
+    m_canvas_ptr->newLayer();
+    updateLayers();
 }

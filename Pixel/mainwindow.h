@@ -46,5 +46,8 @@ private:
 
     Canvas* m_canvas;
     PalettePannel* m_palette_pannel_layout;
+
+private slots:
+    void onForceUpdateCanvas();
 };
 #endif // MAINWINDOW_H
