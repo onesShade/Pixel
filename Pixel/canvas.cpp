@@ -35,3 +35,13 @@ std::vector<LayerInfo> Canvas::getLayersInfo() const
     }
     return res;
 }
+
+void Canvas::deleteLayer(const int id)
+{
+    if (id < 0 || id >= m_layers.size()) {
+        qDebug() << "err: trying to remove layer " << id;
+        return;
+    }
+    delete m_layers[id];
+    m_layers.erase(m_layers.begin() + id);
+}

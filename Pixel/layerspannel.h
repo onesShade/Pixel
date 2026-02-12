@@ -21,13 +21,11 @@ public:
 
     void setName(const QString& name) { m_layer_name->setText(name); }
 
+    void setIndex(int id) { m_index = id; }
+    int getIndex() { return m_index; }
+
 protected:
-    void paintEvent(QPaintEvent *event) override {
-        QStyleOption opt;
-        opt.init(this);
-        QPainter p(this);
-        style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
-    }
+    void paintEvent(QPaintEvent *event) override;
 
 private:
     static constexpr int BTN_SIZE = 20;
@@ -38,6 +36,12 @@ private:
     QPushButton* m_down_btn;
     QPushButton* m_delete_btn;
     QLabel* m_layer_name;
+    int m_index;
+signals:
+    void deleteClicked();
+
+private slots:
+    void onDeleteClicked();
 };
 
 
@@ -55,6 +59,12 @@ private:
     Canvas* m_canvas_ptr;
     QVBoxLayout* m_main_layout;
     std::vector<LayerWidget*> m_layers;
+
+signals:
+    void deleteLayerClicked();
+
+private slots:
+    void onLayerDeleteClicked();
 };
 
 #endif // LAYERSPANNEL_H

@@ -22,6 +22,8 @@ public:
     explicit Layer(QObject* parent = nullptr);
     explicit Layer(const QString& name, QObject* parent = nullptr);
 
+    ~Layer();
+
     void draw(QPainter* painter) const;
     void addObject(Object* object);
 

@@ -17,6 +17,7 @@ public:
     void addLayer(Layer* layer);
     void newLayer();
     void draw(QPainter* painter) const;
+    void deleteLayer(const int id);
 
     std::vector<LayerInfo> getLayersInfo() const;
 

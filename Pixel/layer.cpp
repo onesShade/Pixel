@@ -1,5 +1,7 @@
 #include "layer.h"
 
+#include <QDebug>
+
 Layer::Layer(QObject* parent)
     : QObject(parent)
     , m_visible(true)
@@ -13,6 +15,13 @@ Layer::Layer(const QString& name, QObject* parent)
     , m_locked(false)
     , m_name(name)
 {
+}
+
+Layer::~Layer()
+{
+    qDebug() << "deleting layer";
+    for (Object* i : m_objects)
+        delete i;
 }
 
 void Layer::addObject(Object* object)

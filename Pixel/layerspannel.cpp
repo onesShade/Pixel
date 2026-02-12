@@ -28,9 +28,24 @@ LayerWidget::LayerWidget(QWidget* parent)
     m_layout->addWidget(m_down_btn);
     m_layout->addWidget(m_up_btn);
     m_layout->addWidget(m_delete_btn);
+
+    connect(m_delete_btn, &QPushButton::clicked, this, &LayerWidget::onDeleteClicked);
 }
 
+void LayerWidget::paintEvent(QPaintEvent *event)
+{
+    QStyleOption opt;
+    opt.init(this);
+    QPainter p(this);
+    style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+}
 
+void LayerWidget::onDeleteClicked()
+{
+    emit deleteClicked();
+}
+
+// LayersPannel
 
 LayersPannel::LayersPannel(QWidget *parent, Canvas* canvas)
     : QWidget(parent)
@@ -51,18 +66,33 @@ void LayersPannel::updateLayers()
         return;
     }
 
-    std::vector<LayerInfo> info = m_canvas_ptr->getLayersInfo();
-
-    for (auto i = info.cend(); i != info.cbegin(); )
+    for (LayerWidget* lw : m_layers)
     {
-        --i;
+        m_main_layout->removeWidget(lw);
+        delete lw;
+    }
+    m_layers.clear();
 
+    std::vector<LayerInfo> info = m_canvas_ptr->getLayersInfo();
+    qDebug() << "dbg: layers = " << info.size();
+
+    for (auto i = info.crbegin(); i != info.crend(); ++i)
+    {
         LayerWidget* lw = new LayerWidget(this);
         lw->setName(i->name);
+        lw->setIndex(i - info.crbegin());
+        connect(lw, &LayerWidget::deleteClicked, this, &LayersPannel::onLayerDeleteClicked);
 
         m_layers.push_back(lw);
         m_main_layout->addWidget(lw);
     }
-
 }
 
+void LayersPannel::onLayerDeleteClicked()
+{
+    LayerWidget* sender_layer = qobject_cast<LayerWidget*>(sender());
+    if (sender_layer && m_canvas_ptr) {
+        m_canvas_ptr->deleteLayer(sender_layer->getIndex());
+        updateLayers();
+    }
+}
