@@ -17,6 +17,8 @@ public:
     void addLayer(Layer* layer);
     void draw(QPainter* painter) const;
 
+    std::vector<LayerInfo> getLayersInfo() const;
+
 private:
     std::vector<Layer*> m_layers;
     Layer* m_selected;
@@ -24,6 +26,5 @@ private:
 public slots:
     void paintEvent(QPaintEvent* event) const {};
 };
-
 
 #endif // CANVAS_H

@@ -7,6 +7,14 @@ Layer::Layer(QObject* parent)
 {
 }
 
+Layer::Layer(const QString& name, QObject* parent)
+    : QObject(parent)
+    , m_visible(true)
+    , m_locked(false)
+    , m_name(name)
+{
+}
+
 void Layer::addObject(Object* object)
 {
     object->setParent(this);
