@@ -22,6 +22,7 @@ SOURCES += \
     infopannel.cpp \
     instrumentpannel.cpp \
     layer.cpp \
+    layerspannel.cpp \
     main.cpp \
     mainwindow.cpp \
     object.cpp \
@@ -35,6 +36,7 @@ HEADERS += \
     infopannel.h \
     layer.h \
     instrumentpannel.h \
+    layerspannel.h \
     mainwindow.h \
     object.h \
     palettepannel.h \
@@ -47,5 +49,4 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RESOURCES += \
- \    #icons.qrc
     icons.qrc

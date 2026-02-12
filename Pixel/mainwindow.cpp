@@ -11,7 +11,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     createMenuBar();
-;
+
+
     // start main container config
     QWidget* container_main = new QWidget(this);
     QVBoxLayout* container_layout = new QVBoxLayout(container_main);
@@ -48,11 +49,26 @@ MainWindow::MainWindow(QWidget *parent)
     QVBoxLayout* palette_layers_pannel_layout = new QVBoxLayout(palette_layers_pannel);
     palette_layers_pannel->setStyleSheet("border: 2px solid #f3003f; border-radius: 5px;");
 
-    QWidget* layers_pannel = new QWidget(workspace);
-    QVBoxLayout* layers_pannel_layout = new QVBoxLayout(layers_pannel);
-    QPushButton* filler_button3 = new QPushButton( "Filler button ", layers_pannel);
-    layers_pannel_layout->addWidget(filler_button3);
-    layers_pannel->setStyleSheet("border: 2px solid #ff00ff; border-radius: 5px;");
+    {
+        m_canvas = new Canvas();
+
+        Layer* layer1 = new Layer("layer1", m_canvas);
+        Layer* layer2 = new Layer("layer2", m_canvas);
+
+        Ellipse* e1 = new Ellipse(QPointF(300, 300), 30, layer1);
+        Ellipse* e2 = new Ellipse(QPointF(260, 300), 60, layer2);
+
+        layer1->addObject(e1);
+        layer2->addObject(e2);
+
+        m_canvas->addLayer(layer1);
+        m_canvas->addLayer(layer2);
+
+        renderCanvas();
+    }
+
+    m_layers_pannel = new LayersPannel(palette_layers_pannel, m_canvas);
+    m_layers_pannel->setStyleSheet("border: 2px solid #ff00ff; border-radius: 5px;");
 
     QWidget* palette_pannel = new QWidget(workspace);
     QVBoxLayout* palette_pannel_layout = new QVBoxLayout(palette_pannel);
@@ -69,7 +85,7 @@ MainWindow::MainWindow(QWidget *parent)
     palette_pannel->setStyleSheet("border: 2px solid #f0400f; border-radius: 5px;");
 
     palette_layers_pannel_layout->addWidget(palette_pannel, 6);
-    palette_layers_pannel_layout->addWidget(layers_pannel, 4);
+    palette_layers_pannel_layout->addWidget(m_layers_pannel, 4);
 
     //
     workspace_layout->addWidget(instrument_pannel);
@@ -92,24 +108,6 @@ MainWindow::MainWindow(QWidget *parent)
     // end main container config
 
     setCentralWidget(container_main);
-
-    {
-        m_canvas = new Canvas();
-
-        Layer* layer1 = new Layer(m_canvas);
-        Layer* layer2 = new Layer(m_canvas);
-
-        Ellipse* e1 = new Ellipse(QPointF(300, 300), 30, layer1);
-        Ellipse* e2 = new Ellipse(QPointF(260, 300), 60, layer2);
-
-        layer1->addObject(e1);
-        layer2->addObject(e2);
-
-        m_canvas->addLayer(layer1);
-        m_canvas->addLayer(layer2);
-    }
-
-    renderCanvas();
 
 }
 
@@ -148,18 +146,21 @@ void MainWindow::renderCanvas()
 
     QPainter painter(&buffer);
 
-
-    if (m_canvas) {
+    if (m_canvas)
         m_canvas->draw(&painter);
-    }
+
     painter.end();
 
     m_scene_main->clear();
     m_scene_main->addPixmap(buffer);
 }
 
+void MainWindow::onForceUpdateCanvas()
+{
+    renderCanvas();
+}
+
 MainWindow::~MainWindow()
 {
     delete ui;
 }
-

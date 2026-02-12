@@ -15,6 +15,7 @@
 #include "contextpannel.h"
 #include "instrumentpannel.h"
 #include "palettepannel.h"
+#include "layerspannel.h"
 
 #include "canvas.h"
 #include "layer.h"
@@ -46,8 +47,12 @@ private:
     InfoPannel* m_info_pannel_layout;
     ContextPannel* m_context_pannel_layout;
     InstrumentPannel* m_instrument_pannel_layout;
+    LayersPannel* m_layers_pannel;
 
     Canvas* m_canvas;
     PalettePannel* m_palette_pannel_layout;
+
+private slots:
+    void onForceUpdateCanvas();
 };
 #endif // MAINWINDOW_H
