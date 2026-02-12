@@ -17,23 +17,7 @@ class LayerWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit LayerWidget(QWidget* parent = nullptr)
-        : QWidget(parent)
-    {
-        m_layout = new QHBoxLayout(this);
-        m_layout->setSpacing(3);
-
-        m_btn_1 = new QPushButton("b1");
-        m_btn_2 = new QPushButton("b2");
-        m_btn_3 = new QPushButton("b3");
-        m_layer_name = new QLabel("lol");
-
-        m_layout->addStretch();
-        m_layout->addWidget(m_btn_1);
-        m_layout->addWidget(m_layer_name);
-        m_layout->addWidget(m_btn_2);
-        m_layout->addWidget(m_btn_3);
-    };
+    explicit LayerWidget(QWidget* parent = nullptr);
 
     void setName(const QString& name) { m_layer_name->setText(name); }
 
@@ -46,10 +30,12 @@ protected:
     }
 
 private:
+    static constexpr int BTN_SIZE = 32;
     QHBoxLayout* m_layout;
-    QPushButton* m_btn_1;
-    QPushButton* m_btn_2;
-    QPushButton* m_btn_3;
+    QPushButton* m_lock_btn;
+    QPushButton* m_eye_btn;
+    QPushButton* m_up_btn;
+    QPushButton* m_down_btn;
     QLabel* m_layer_name;
 };
 

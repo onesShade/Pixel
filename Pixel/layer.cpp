@@ -30,3 +30,13 @@ void Layer::draw(QPainter* painter) const
         obj->draw(painter);
     }
 }
+
+LayerInfo Layer::getInfo() const
+{
+    return LayerInfo
+        {
+            m_name,
+            m_visible,
+            m_locked
+        };
+}

@@ -28,15 +28,13 @@ public:
     void setName(const QString& name) { m_name = name; }
     QString getName() const { return m_name; }
 
-    LayerInfo getInfo() const
-    {
-        return LayerInfo
-        {
-            m_name,
-            m_visible,
-            m_locked
-        };
-    }
+    void setVisible(const bool vissible) { m_visible = vissible; }
+    bool isVisible() const { return m_visible; }
+
+    void setLocked(const bool locked) { m_locked = locked; }
+    bool isLosked() const { return m_locked; }
+
+    LayerInfo getInfo() const;
 
 private:
     bool m_visible;
