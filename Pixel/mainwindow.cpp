@@ -52,7 +52,7 @@ MainWindow::MainWindow(QWidget *parent)
     palette_layers_pannel->setStyleSheet("border: 2px solid #f3003f; border-radius: 5px;");
 
 
-    m_project_manager = new projectManager();
+    m_project_manager = new ProjectManager();
     m_project_manager->createProject();
     Canvas* canvas = m_project_manager->GetCurrentCanvas();
     canvas->setScene(m_scene_main);

@@ -2,12 +2,12 @@
 
 #include <QDebug>
 
-projectManager::projectManager()
+ProjectManager::ProjectManager()
     : m_selected_project(nullptr)
 {
 }
 
-void projectManager::createProject()
+void ProjectManager::createProject()
 {
     Project* project = new Project();
     m_projects.push_back(project);
@@ -17,7 +17,7 @@ void projectManager::createProject()
     }
 }
 
-Canvas* projectManager::GetCurrentCanvas()
+Canvas* ProjectManager::GetCurrentCanvas()
 {
     if(!m_selected_project) {
         qDebug() << "err: trying to use NULL project";

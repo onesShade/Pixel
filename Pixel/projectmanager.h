@@ -3,10 +3,10 @@
 
 #include "project.h"
 
-class projectManager
+class ProjectManager
 {
 public:
-    projectManager();
+    ProjectManager();
 
     Canvas* GetCurrentCanvas();
     void createProject();

@@ -4,10 +4,13 @@
 #include <QObject>
 #include <QPainter>
 #include <QWidget>
+#include <QDebug>
 #include <QPaintEvent>
 #include <QGraphicsScene>
 
 #include "layer.h"
+#include "object.h"
+//#include "projectmanager.h"
 
 class Canvas : public QWidget
 {
@@ -24,6 +27,7 @@ public:
     void setScene(QGraphicsScene* scene) { m_parent_sceene = scene; }
     void moveLayer(int id, int shift);
     void selectLayer(int id);
+    void addObjectToSelectedLayer(Object* obj);
 
     std::vector<LayerInfo> getLayersInfo() const;
 
@@ -31,6 +35,7 @@ private:
     std::vector<Layer*> m_layers;
     QGraphicsScene* m_parent_sceene;
     Layer* m_selected;
+   // ProjectManager* m_project_manager;
 
 public slots:
     void paintEvent(QPaintEvent* event) const {}

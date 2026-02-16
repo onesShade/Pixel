@@ -50,7 +50,7 @@ private:
     InstrumentPannel* m_instrument_pannel_layout;
     LayersPannel* m_layers_pannel;
 
-    projectManager* m_project_manager;
+    ProjectManager* m_project_manager;
 
     PalettePannel* m_palette_pannel_layout;
 

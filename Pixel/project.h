@@ -6,7 +6,6 @@
 
 #include "canvas.h"
 
-
 class Project : public QObject
 {
     Q_OBJECT

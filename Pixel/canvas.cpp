@@ -1,5 +1,9 @@
 #include "canvas.h"
+
 #include <QDebug>
+
+#include "layer.h"
+#include "object.h"
 
 #define ID_IN_BOUNDS(id) (id >= 0 || id < m_layers.size())
 
@@ -118,4 +122,19 @@ void Canvas::selectLayer(int id)
     }
 
     m_selected = m_layers[id];
+}
+
+void Canvas::addObjectToSelectedLayer(Object* obj)
+{
+    if(!m_selected)
+    {
+        qDebug() << "err: trying to add obj to NULL layer";
+        return;
+    }
+    if(!obj)
+    {
+        qDebug() << "err: trying to add NULL obj";
+        return;
+    }
+    m_selected->addObject(obj);
 }
