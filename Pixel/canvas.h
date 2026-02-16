@@ -15,6 +15,7 @@ class Canvas : public QWidget
 
 public:
     explicit Canvas(QObject* parent = nullptr);
+
     void addLayer(Layer* layer);
     void newLayer();
     void draw(QPainter* painter) const;
@@ -30,7 +31,6 @@ private:
     std::vector<Layer*> m_layers;
     QGraphicsScene* m_parent_sceene;
     Layer* m_selected;
-
 
 public slots:
     void paintEvent(QPaintEvent* event) const {}

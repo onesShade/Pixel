@@ -13,6 +13,9 @@ class Project : public QObject
 
 public:
     Project();
+    ~Project();
+
+    Canvas* GetCanvas() {return m_canvas;}
 
 private:
     Canvas* m_canvas;

@@ -7,7 +7,11 @@ class projectManager
 {
 public:
     projectManager();
+
+    Canvas* GetCurrentCanvas();
+    void createProject();
 private:
+
     std::vector<Project*> m_projects;
     Project* m_selected_project;
 };

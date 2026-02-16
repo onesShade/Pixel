@@ -27,6 +27,7 @@ SOURCES += \
     mainwindow.cpp \
     object.cpp \
     palettepannel.cpp \
+    project.cpp \
     projectmanager.cpp
 
 HEADERS += \
