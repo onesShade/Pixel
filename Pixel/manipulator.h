@@ -18,7 +18,11 @@ public:
     QPainterPath shape() const override;
 
     bool isInteracting() const { return m_state != None; }
-    void setViewScale(qreal scale); // Установка масштаба окна просмотра
+    void setViewScale(qreal scale);
+
+signals:
+    void interactionStarted();
+    void interactionEnded();
 
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
@@ -40,7 +44,7 @@ private:
     qreal m_start_rotation;
     QRectF m_start_rect;
     QTransform m_initial_scene_transform;
-    qreal m_view_scale = 1.0; // Текущий масштаб просмотра для компенсации размеров
+    qreal m_view_scale = 1.0;
 
     QRectF handleRect(int xPos, int yPos) const;
     QRectF rotateHandle() const;

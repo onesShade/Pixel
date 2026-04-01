@@ -37,16 +37,11 @@ std::vector<LayerInfo> Canvas::getLayersInfo() const {
 }
 
 void Canvas::deleteLayer(const int id) {
-    if (!ID_IN_BOUNDS(id))
-        return;
-
-    if (m_parent_sceene) {
-        m_parent_sceene->clearSelection();
-    }
+    if (!ID_IN_BOUNDS(id)) return;
+    if (m_parent_sceene) m_parent_sceene->clearSelection();
 
     Layer* layer = m_layers[id];
-    if (m_parent_sceene)
-        m_parent_sceene->removeItem(layer);
+    if (m_parent_sceene) m_parent_sceene->removeItem(layer);
 
     delete layer;
     m_layers.erase(m_layers.begin() + id);
@@ -54,10 +49,12 @@ void Canvas::deleteLayer(const int id) {
     if (m_layers.empty()) {
         m_selected = nullptr;
         m_selected_index = -1;
-    }
-    else
+        emit activeLayerChanged(-1);
+    } else {
         selectLayer(std::max(0, m_selected_index - 1));
+    }
     renderCanvas();
+    updateFilters();
 }
 
 void Canvas::renderCanvas() {
@@ -87,10 +84,10 @@ void Canvas::moveLayer(int id, int shift) {
 }
 
 void Canvas::selectLayer(int id) {
-    if (!ID_IN_BOUNDS(id))
-        return;
+    if (!ID_IN_BOUNDS(id)) return;
     m_selected_index = id;
     m_selected = m_layers[id];
+    emit activeLayerChanged(id);
 }
 
 void Canvas::setLayerVisible(int id, bool visible) {
@@ -149,4 +146,63 @@ void Canvas::setSize(int w, int h) {
         m_bg_item->setRect(0, 0, w, h);
     }
     renderCanvas();
+}
+
+void Canvas::newFilterLayer() {
+    m_layer_counter++;
+    FilterLayer* l = new FilterLayer(QString("Filter%1").arg(m_layer_counter));
+    addLayer(l);
+    updateFilters();
+}
+
+void Canvas::updateFilters() {
+    if (!m_parent_sceene) return;
+
+    if (m_canvas_size.width() <= 0 || m_canvas_size.height() <= 0) return;
+
+    std::vector<QGraphicsItem*> hidden_ui;
+    for (QGraphicsItem* item : m_parent_sceene->items()) {
+        if (item->zValue() >= 1000 && item->isVisible()) {
+            item->setVisible(false);
+            hidden_ui.push_back(item);
+        }
+    }
+
+    for (size_t i = 0; i < m_layers.size(); ++i) {
+        if (m_layers[i]->isFilter() && m_layers[i]->isVisible()) {
+            FilterLayer* fl = static_cast<FilterLayer*>(m_layers[i]);
+
+            std::vector<bool> visibility(m_layers.size());
+            for (size_t j = i; j < m_layers.size(); ++j) {
+                visibility[j] = m_layers[j]->isVisible();
+                m_layers[j]->setVisible(false);
+            }
+
+            QImage buffer(m_canvas_size, QImage::Format_ARGB32_Premultiplied);
+            buffer.fill(Qt::transparent);
+            QPainter p(&buffer);
+            m_parent_sceene->render(&p, QRectF(0,0,m_canvas_size.width(), m_canvas_size.height()), QRectF(0,0,m_canvas_size.width(), m_canvas_size.height()));
+            p.end();
+
+            for (size_t j = i; j < m_layers.size(); ++j) {
+                m_layers[j]->setVisible(visibility[j]);
+            }
+
+            fl->setCachedImage(buffer);
+        }
+    }
+
+    for (QGraphicsItem* item : hidden_ui) item->setVisible(true);
+}
+
+void Canvas::setFiltersInteractionActive(bool active) {
+    for (Layer* l : m_layers) {
+        if (l->isFilter()) {
+            l->setOpacity(active ? 1.0 : 0.0);
+            if (active) l->update();
+        }
+    }
+    if (active) {
+        updateFilters();
+    }
 }

@@ -18,6 +18,7 @@ public:
     void setName(const QString& name);
     void setIndex(int id) { m_index = id; }
     int getIndex() const { return m_index; }
+    void setIsFilter(bool isF);
 
     void setSelected(bool selected);
     bool isSelected() const { return m_is_selected; }
@@ -70,6 +71,7 @@ private:
     QVBoxLayout *m_main_layout, *m_layers_layout;
     QScrollArea* m_scroll_area;
     std::vector<LayerWidget*> m_layers;
+    QPushButton* m_new_filter_btn;
 
 private slots:
     void onLayerDeleteClicked();
@@ -80,6 +82,7 @@ private slots:
     void onLayerVisibleToggled(bool visible);
     void onLayerLockedToggled(bool locked);
     void onLayerNameChanged(const QString& newName);
+    void onNewFilterClicked();
 };
 
 #endif // LAYERSPANNEL_H

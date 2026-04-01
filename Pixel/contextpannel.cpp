@@ -65,10 +65,35 @@ ContextPannel::ContextPannel(QWidget* parent) : QWidget(parent) {
     layer_layout->addWidget(m_btn_layer_down);
     layer_layout->addWidget(m_btn_layer_up);
 
+    // --- Группа Фильтра ---
+    m_filter_group = new QGroupBox("Filter", this);
+    QHBoxLayout* filter_layout = new QHBoxLayout(m_filter_group);
+    filter_layout->setContentsMargins(5, 5, 5, 5);
+
+    m_filter_type_box = new QComboBox(this);
+    m_filter_type_box->addItem("None", static_cast<int>(FilterType::None));
+    m_filter_type_box->addItem("Grayscale", static_cast<int>(FilterType::Grayscale));
+    m_filter_type_box->addItem("Invert", static_cast<int>(FilterType::Invert));
+    m_filter_type_box->addItem("Brightness/Contrast", static_cast<int>(FilterType::BrightnessContrast));
+    m_filter_type_box->addItem("Blur", static_cast<int>(FilterType::Blur));
+
+    m_filter_param1 = createSpinBox(-100, 100);
+    m_filter_param2 = createSpinBox(-100, 100);
+
+    m_lbl_filter_p1 = new QLabel("P1:", this);
+    m_lbl_filter_p2 = new QLabel("P2:", this);
+
+    filter_layout->addWidget(new QLabel("Type:", this)); filter_layout->addWidget(m_filter_type_box);
+    filter_layout->addWidget(m_lbl_filter_p1); filter_layout->addWidget(m_filter_param1);
+    filter_layout->addWidget(m_lbl_filter_p2); filter_layout->addWidget(m_filter_param2);
+
+
+
     main_layout->addWidget(m_lbl_placeholder);
     main_layout->addWidget(m_geometry_group);
     main_layout->addWidget(m_style_group);
     main_layout->addWidget(m_layer_group);
+    main_layout->addWidget(m_filter_group);
     main_layout->addStretch();
 
     m_default_state.fill = Qt::cyan;
@@ -95,6 +120,9 @@ ContextPannel::ContextPannel(QWidget* parent) : QWidget(parent) {
     connect(m_thick_box, &QDoubleSpinBox::editingFinished, this, &ContextPannel::onAnyUIChanged);
     connect(m_font_box, &QFontComboBox::currentFontChanged, this, &ContextPannel::onAnyUIChanged);
     connect(m_font_size_box, &QDoubleSpinBox::editingFinished, this, &ContextPannel::onAnyUIChanged);
+    connect(m_filter_type_box, comboSignal, this, &ContextPannel::onFilterUIChanged);
+    connect(m_filter_param1, &QDoubleSpinBox::editingFinished, this, &ContextPannel::onFilterUIChanged);
+    connect(m_filter_param2, &QDoubleSpinBox::editingFinished, this, &ContextPannel::onFilterUIChanged);
 
     setMode(false, false, false, false, "Pointer");
 }
@@ -110,19 +138,25 @@ QDoubleSpinBox* ContextPannel::createSpinBox(double min, double max) {
 }
 
 void ContextPannel::setMode(bool isFigSel, bool isTextSel, bool isFigTool, bool isTextTool, const QString& toolName) {
+    bool isFilterSel = (m_current_filter_target != nullptr); // <--- Добавили эту строку
     bool isImgSel = (m_current_image_target != nullptr);
-    bool somethingSelected = isFigSel || isTextSel || isImgSel;
+    bool somethingSelected = isFigSel || isTextSel || isImgSel || isFilterSel; // <--- Обновили условие
 
     m_lbl_placeholder->setVisible(!somethingSelected && !isFigTool && !isTextTool);
     if (!toolName.isEmpty()) m_lbl_placeholder->setText(QString("Tool: %1. No specific settings.").arg(toolName));
 
-    m_geometry_group->setVisible(somethingSelected);
-    m_style_group->setVisible(isFigSel || isFigTool);
-    m_text_group->setVisible(isTextSel || isTextTool);
+    m_filter_group->setVisible(isFilterSel);
+    m_geometry_group->setVisible(somethingSelected && !isFilterSel);
+    m_style_group->setVisible((isFigSel || isFigTool) && !isFilterSel);
+    m_text_group->setVisible((isTextSel || isTextTool) && !isFilterSel);
     m_layer_group->setVisible(somethingSelected);
 
     if (!somethingSelected) {
-        m_current_target = nullptr; m_current_text_target = nullptr; m_current_image_target = nullptr;
+        m_current_target = nullptr;
+        m_current_text_target = nullptr;
+        m_current_image_target = nullptr;
+        m_current_filter_target = nullptr;
+
         blockSignals(true);
         if (isTextTool) {
             m_font_box->setCurrentFont(m_default_text_state.font);
@@ -134,7 +168,8 @@ void ContextPannel::setMode(bool isFigSel, bool isTextSel, bool isFigTool, bool 
 }
 
 void ContextPannel::setTarget(Figure* figure) {
-    m_current_target = figure; m_current_text_target = nullptr; m_current_image_target = nullptr;
+    m_current_target = figure; m_current_text_target = nullptr;
+    m_current_image_target = nullptr; m_current_filter_target = nullptr;
     if (!figure) return;
     blockSignals(true);
     FigureState s = figure->getState();
@@ -149,7 +184,9 @@ void ContextPannel::setTarget(Figure* figure) {
 }
 
 void ContextPannel::setTarget(TextObject* textObj) {
-    m_current_target = nullptr; m_current_text_target = textObj; m_current_image_target = nullptr;
+    m_current_target = nullptr; m_current_text_target = textObj;
+    m_current_image_target = nullptr; m_current_filter_target = nullptr;
+
     if (!textObj) return;
     blockSignals(true);
     TextState s = textObj->getState();
@@ -163,7 +200,8 @@ void ContextPannel::setTarget(TextObject* textObj) {
 }
 
 void ContextPannel::setTarget(ImageObject* imageObj) {
-    m_current_target = nullptr; m_current_text_target = nullptr; m_current_image_target = imageObj;
+    m_current_target = nullptr; m_current_text_target = nullptr;
+    m_current_image_target = imageObj; m_current_filter_target = nullptr;
     if (!imageObj) return;
     blockSignals(true);
     ImageState s = imageObj->getState();
@@ -171,6 +209,26 @@ void ContextPannel::setTarget(ImageObject* imageObj) {
     m_w_box->setValue(s.rect.width()); m_h_box->setValue(s.rect.height());
     m_rot_box->setValue(s.rot);
     blockSignals(false);
+}
+
+void ContextPannel::setTarget(FilterLayer* filterObj) {
+    m_current_target = nullptr; m_current_text_target = nullptr;
+    m_current_image_target = nullptr; m_current_filter_target = filterObj;
+    if (!filterObj) return;
+
+    blockSignals(true);
+    FilterState s = filterObj->getFilterState();
+    m_filter_type_box->setCurrentIndex(m_filter_type_box->findData(static_cast<int>(s.type)));
+    m_filter_param1->setValue(s.param1);
+    m_filter_param2->setValue(s.param2);
+    updateFilterUIRanges();
+    blockSignals(false);
+}
+
+void ContextPannel::onFilterUIChanged() {
+    updateFilterUIRanges();
+    if (m_current_filter_target)
+        emit propertyChanged();
 }
 
 TextState ContextPannel::getUITextState(const TextState& baseState) const {
@@ -197,6 +255,32 @@ ImageState ContextPannel::getUIImageState(const ImageState& baseState) const {
     s.pos = QPointF(m_x_box->value(), m_y_box->value()); s.rot = m_rot_box->value();
     s.rect = QRectF(-m_w_box->value()/2.0, -m_h_box->value()/2.0, m_w_box->value(), m_h_box->value());
     return s;
+}
+
+FilterState ContextPannel::getUIFilterState() const {
+    FilterState s;
+    s.type = static_cast<FilterType>(m_filter_type_box->currentData().toInt());
+    s.param1 = m_filter_param1->value();
+    s.param2 = m_filter_param2->value();
+    return s;
+}
+
+void ContextPannel::updateFilterUIRanges() {
+    FilterType type = static_cast<FilterType>(m_filter_type_box->currentData().toInt());
+
+    if (type == FilterType::Blur) {
+        m_lbl_filter_p1->setText("Radius:"); m_lbl_filter_p1->show();
+        m_filter_param1->setRange(0, 50);    m_filter_param1->show();
+        m_lbl_filter_p2->hide();             m_filter_param2->hide();
+    } else if (type == FilterType::BrightnessContrast) {
+        m_lbl_filter_p1->setText("Bright:"); m_lbl_filter_p1->show();
+        m_filter_param1->setRange(-100, 100);m_filter_param1->show();
+        m_lbl_filter_p2->setText("Contr:");  m_lbl_filter_p2->show();
+        m_filter_param2->setRange(-100, 100);m_filter_param2->show();
+    } else {
+        m_lbl_filter_p1->hide(); m_filter_param1->hide();
+        m_lbl_filter_p2->hide(); m_filter_param2->hide();
+    }
 }
 
 void ContextPannel::setDefaultColor(bool isFill, const QColor& color) {

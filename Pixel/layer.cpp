@@ -45,7 +45,7 @@ void Layer::setLocked(const bool locked) {
 }
 
 LayerInfo Layer::getInfo() const {
-    return LayerInfo{m_name, m_visible, m_locked};
+    return LayerInfo{m_name, m_visible, m_locked, isFilter()};
 }
 
 QRectF Layer::boundingRect() const {

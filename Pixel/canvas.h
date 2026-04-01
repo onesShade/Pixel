@@ -10,6 +10,7 @@
 
 #include "layer.h"
 #include "object.h"
+#include "filterlayer.h"
 
 class Canvas : public QObject {
     Q_OBJECT
@@ -39,6 +40,11 @@ public:
     int getLayerIdOfObject(Object* obj) const;
 
     std::vector<LayerInfo> getLayersInfo() const;
+
+    void newFilterLayer();
+    void updateFilters();
+    void setFiltersInteractionActive(bool active);
+
     QSize getSize() const { return m_canvas_size; }
     void renameLayer(int id, const QString& new_name);
 private:
@@ -49,6 +55,9 @@ private:
     QSize m_canvas_size;
     QGraphicsRectItem* m_bg_item;
     int m_layer_counter;
+
+signals:
+    void activeLayerChanged(int id);
 };
 
 #endif // CANVAS_H

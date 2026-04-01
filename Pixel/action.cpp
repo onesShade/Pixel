@@ -87,3 +87,8 @@ ModifyImageCommand::ModifyImageCommand(ImageObject* img, const ImageState& oStat
     : QUndoCommand(p), m_image(img), m_old_state(oState), m_new_state(nState) { setText("Modify Image"); }
 void ModifyImageCommand::undo() { if (m_image) m_image->setState(m_old_state); }
 void ModifyImageCommand::redo() { if (m_image) m_image->setState(m_new_state); }
+
+ModifyFilterCommand::ModifyFilterCommand(FilterLayer* filter, const FilterState& oState, const FilterState& nState, QUndoCommand *p)
+    : QUndoCommand(p), m_filter(filter), m_old_state(oState), m_new_state(nState) { setText("Modify Filter"); }
+void ModifyFilterCommand::undo() { if (m_filter) m_filter->setFilterState(m_old_state); }
+void ModifyFilterCommand::redo() { if (m_filter) m_filter->setFilterState(m_new_state); }

@@ -31,6 +31,14 @@ WorkspaceController::WorkspaceController(const WorkspaceContext& ctx, QObject* p
         connect(m_palette_pannel, &PalettePannel::colorPreviewed, this, &WorkspaceController::onColorPickedPreview);
         connect(m_palette_pannel, &PalettePannel::colorCommitted, this, &WorkspaceController::onColorPickedCommit);
     }
+
+    connect(m_undo_stack, &QUndoStack::indexChanged, this, [this](){
+        if (Canvas* c = m_project_manager->GetCurrentCanvas()) c->updateFilters();
+    });
+
+    if (m_project_manager) {
+        connect(m_project_manager->GetCurrentCanvas(), &Canvas::activeLayerChanged, this, &WorkspaceController::onActiveLayerChanged);
+    }
 }
 
 QString WorkspaceController::getToolName(InstrumentType type) {
@@ -258,9 +266,13 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
 
         if (event->type() == QEvent::MouseButtonDblClick && m_current_tool == InstrumentType::POINTER) {
             QMouseEvent *mEvent = static_cast<QMouseEvent *>(event);
-            QGraphicsItem* item = m_view->itemAt(mEvent->pos());
-            TextObject* txt = dynamic_cast<TextObject*>(item);
-            if (!txt && item && item->parentItem()) txt = dynamic_cast<TextObject*>(item->parentItem());
+            TextObject* txt = nullptr;
+
+            for (QGraphicsItem* it : m_view->items(mEvent->pos())) {
+                txt = dynamic_cast<TextObject*>(it);
+                if (!txt && it->parentItem()) txt = dynamic_cast<TextObject*>(it->parentItem());
+                if (txt) break;
+            }
 
             if (txt) {
                 bool ok;
@@ -276,6 +288,9 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
 
         if (event->type() == QEvent::MouseButtonPress) {
             QMouseEvent *mEvent = static_cast<QMouseEvent *>(event);
+            if (m_is_drawing) {
+                if (canvas) canvas->setFiltersInteractionActive(false);
+            }
             if ((mEvent->button() == Qt::LeftButton && (m_space_pressed || m_current_tool == InstrumentType::HAND)) || mEvent->button() == Qt::MiddleButton) {
                 m_is_panning = true; m_last_pan_pos = mEvent->pos(); m_view->setCursor(Qt::ClosedHandCursor); return true;
             }
@@ -310,22 +325,41 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
 
 
             if (mEvent->button() == Qt::LeftButton && m_current_tool == InstrumentType::POINTER) {
-                QGraphicsItem* item = m_view->itemAt(mEvent->pos());
+                Object* targetObj = nullptr;
 
-                Figure* fig = dynamic_cast<Figure*>(item);
-                if (!fig && item && item->parentItem()) fig = dynamic_cast<Figure*>(item->parentItem());
+                // Пробиваем курсором все слои, игнорируем рамку выделения и слой-фильтр
+                for (QGraphicsItem* it : m_view->items(mEvent->pos())) {
+                    if (it->zValue() >= 1000) continue; // Игнорируем ручки TransformBox
+
+                    targetObj = dynamic_cast<Object*>(it);
+                    if (!targetObj && it->parentItem()) targetObj = dynamic_cast<Object*>(it->parentItem());
+
+                    if (targetObj) break; // Нашли первый реальный объект (Фигуру, Текст или Картинку)
+                }
+
+                if (targetObj) {
+                    m_view->scene()->clearSelection();
+                    targetObj->setSelected(true);
+                } else {
+                    m_view->scene()->clearSelection();
+                }
+
+                Figure* fig = dynamic_cast<Figure*>(targetObj);
                 if (fig) { m_drag_target = fig; m_drag_start_state = fig->getState(); }
                 else { m_drag_target = nullptr; }
 
-                TextObject* txt = dynamic_cast<TextObject*>(item);
-                if (!txt && item && item->parentItem()) txt = dynamic_cast<TextObject*>(item->parentItem());
+                TextObject* txt = dynamic_cast<TextObject*>(targetObj);
                 if (txt) { m_drag_target_text = txt; m_drag_start_text_state = txt->getState(); }
                 else { m_drag_target_text = nullptr; }
 
-                ImageObject* img = dynamic_cast<ImageObject*>(item);
-                if (!img && item && item->parentItem()) img = dynamic_cast<ImageObject*>(item->parentItem());
+                ImageObject* img = dynamic_cast<ImageObject*>(targetObj);
                 if (img) { m_drag_target_image = img; m_drag_start_image_state = img->getState(); }
                 else { m_drag_target_image = nullptr; }
+
+                // Если схватили объект, временно отключаем (прячем) фильтры
+                if ((m_drag_target || m_drag_target_text || m_drag_target_image) && (!m_transform_box || !m_transform_box->isInteracting())) {
+                    if (canvas) canvas->setFiltersInteractionActive(false);
+                }
             }
         }
 
@@ -358,6 +392,10 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
         if (event->type() == QEvent::MouseButtonRelease) {
             QMouseEvent *mEvent = static_cast<QMouseEvent *>(event);
             if (m_is_panning) { m_is_panning = false; setCurrentTool(m_current_tool); return true; }
+
+            if (m_is_drawing || m_drag_target || m_drag_target_text || m_drag_target_image) {
+                if (canvas) canvas->setFiltersInteractionActive(true);
+            }
 
             if (m_is_drawing && mEvent->button() == Qt::LeftButton) {
                 m_is_drawing = false;
@@ -436,13 +474,11 @@ void WorkspaceController::onSelectionChanged() {
         Object* obj = dynamic_cast<Object*>(item);
 
         int layerId = canvas->getLayerIdOfObject(obj);
-        // Заблокированный слой сбрасывает выделение
         if (layerId != -1 && canvas->getLayersInfo()[layerId].locked) {
             item->setSelected(false);
             return;
         }
 
-        // Авто-выбор слоя в панели
         if (layerId != -1 && layerId != canvas->getSelectedLayerid()) {
             if (m_layers_pannel) m_layers_pannel->selectLayerFromOutside(layerId);
             else canvas->selectLayer(layerId);
@@ -452,21 +488,20 @@ void WorkspaceController::onSelectionChanged() {
         m_selected_text = dynamic_cast<TextObject*>(obj);
         m_selected_image = dynamic_cast<ImageObject*>(obj);
 
-        if (m_selected_figure) {
-            m_transform_box = new TransformBox(item, m_undo_stack);
-            updateTransformBoxScale();
-            m_context_pannel->setTarget(m_selected_figure);
-        } else if (m_selected_text) {
-            m_transform_box = new TransformBox(item, m_undo_stack);
-            updateTransformBoxScale();
-            m_context_pannel->setTarget(m_selected_text);
-        } else if (m_selected_image) {
-            m_transform_box = new TransformBox(item, m_undo_stack);
-            updateTransformBoxScale();
-            m_context_pannel->setTarget(m_selected_image);
-        }
+
 
         if (m_selected_figure || m_selected_text || m_selected_image) {
+            m_transform_box = new TransformBox(item, m_undo_stack);
+
+            connect(m_transform_box, &TransformBox::interactionStarted, this, [canvas]() { canvas->setFiltersInteractionActive(false); });
+            connect(m_transform_box, &TransformBox::interactionEnded, this, [canvas]() { canvas->setFiltersInteractionActive(true); });
+
+            updateTransformBoxScale();
+
+            if (m_selected_figure) m_context_pannel->setTarget(m_selected_figure);
+            else if (m_selected_text) m_context_pannel->setTarget(m_selected_text);
+            else m_context_pannel->setTarget(m_selected_image);
+
             m_palette_pannel->setColor(m_context_pannel->getActiveColor());
         }
     } else {
@@ -500,13 +535,35 @@ void WorkspaceController::onMoveObjectLayerRequested(int shift) {
     int newLayerId = oldLayerId + shift;
     std::vector<LayerInfo> infos = canvas->getLayersInfo();
 
-    if (newLayerId >= 0 && newLayerId < (int)infos.size() && !infos[newLayerId].locked) {
+    while (newLayerId >= 0 && newLayerId < (int)infos.size()) {
+        if (!infos[newLayerId].locked && !infos[newLayerId].isFilter) {
+            break;
+        }
+        newLayerId += (shift > 0) ? 1 : -1;
+    }
+
+    if (newLayerId >= 0 && newLayerId < (int)infos.size() && newLayerId != oldLayerId) {
         m_undo_stack->push(new MoveObjectLayerCommand(canvas, target, oldLayerId, newLayerId));
         m_layers_pannel->selectLayerFromOutside(newLayerId);
     }
 }
 
 void WorkspaceController::onContextPropertyChanged() {
+
+    Canvas* canvas = m_project_manager->GetCurrentCanvas();
+    if (canvas && canvas->getSelectedLayerid() >= 0) {
+        Layer* activeLayer = canvas->getLayers()[canvas->getSelectedLayerid()];
+        if (activeLayer->isFilter()) {
+            FilterLayer* filter = static_cast<FilterLayer*>(activeLayer);
+            FilterState oldState = filter->getFilterState();
+            FilterState newState = m_context_pannel->getUIFilterState();
+            if (oldState != newState) {
+                m_undo_stack->push(new ModifyFilterCommand(filter, oldState, newState));
+            }
+            return;
+        }
+    }
+
     if (m_selected_figure) {
         FigureState oldState = m_selected_figure->getState();
         FigureState newState = m_context_pannel->getUIState(oldState);
@@ -581,6 +638,25 @@ void WorkspaceController::onColorPickedCommit(const QColor& color) {
         m_context_pannel->setTarget(m_selected_text);
     } else {
         m_context_pannel->setDefaultColor(m_color_target_is_fill, color);
+    }
+}
+
+void WorkspaceController::onActiveLayerChanged(int id) {
+    Canvas* canvas = m_project_manager->GetCurrentCanvas();
+    if (!canvas) return;
+
+    if (id >= 0 && canvas->getLayers()[id]->isFilter()) {
+        FilterLayer* filter = static_cast<FilterLayer*>(canvas->getLayers()[id]);
+        clearTransformBox();
+        m_view->scene()->clearSelection();
+        m_selected_figure = nullptr; m_selected_text = nullptr; m_selected_image = nullptr;
+        m_context_pannel->setTarget(filter);
+        m_context_pannel->setMode(false, false, false, false, "Filter Properties");
+    } else {
+        // ИСПРАВЛЕНИЕ: Возвращаем UI в нормальное состояние при уходе со слоя-фильтра
+        m_context_pannel->setTarget(static_cast<Figure*>(nullptr));
+        setCurrentTool(m_current_tool); // Возвращаем UI под текущий инструмент
+        onSelectionChanged(); // Принудительно проверяем, выделен ли объект на текущем слое
     }
 }
 

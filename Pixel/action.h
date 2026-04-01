@@ -6,6 +6,7 @@
 #include <QGraphicsItem>
 #include "object.h"
 #include "canvas.h"
+#include "filterlayer.h"
 
 class AddObjectCommand : public QUndoCommand {
 public:
@@ -72,6 +73,17 @@ private:
     ImageObject* m_image;
     ImageState m_old_state;
     ImageState m_new_state;
+};
+
+class ModifyFilterCommand : public QUndoCommand {
+public:
+    ModifyFilterCommand(FilterLayer* filter, const FilterState& oldState, const FilterState& newState, QUndoCommand *parent = nullptr);
+    void undo() override;
+    void redo() override;
+private:
+    FilterLayer* m_filter;
+    FilterState m_old_state;
+    FilterState m_new_state;
 };
 
 #endif // ACTION_H

@@ -10,6 +10,7 @@ struct LayerInfo {
     QString name;
     bool visible;
     bool locked;
+    bool isFilter;
 };
 
 class Layer : public QGraphicsObject {
@@ -37,6 +38,7 @@ public:
 
     virtual QRectF boundingRect() const override;
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    virtual bool isFilter() const { return false; }
 
 private:
     bool m_visible;

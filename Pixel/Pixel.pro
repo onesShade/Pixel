@@ -19,6 +19,7 @@ SOURCES += \
     action.cpp \
     canvas.cpp \
     contextpannel.cpp \
+    filterlayer.cpp \
     infopannel.cpp \
     instrumentpannel.cpp \
     layer.cpp \
@@ -37,6 +38,7 @@ HEADERS += \
     action.h \
     canvas.h \
     contextpannel.h \
+    filterlayer.h \
     infopannel.h \
     layer.h \
     instrumentpannel.h \

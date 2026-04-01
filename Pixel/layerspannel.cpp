@@ -53,6 +53,26 @@ void LayerWidget::setName(const QString& name) {
     m_layer_name->setCursorPosition(0);
 }
 
+void LayerWidget::setIsFilter(bool isF) {
+    if (isF) {
+        m_lock_btn->setText("⚙");
+        m_lock_btn->setStyleSheet("font-weight: bold; color: #4a6b8f;");
+        m_lock_btn->setCheckable(false); // Для фильтра это кнопка настроек
+
+        // ИСПРАВЛЕНИЕ: Отвязываем старый тумблер и привязываем клик по ⚙ к выбору слоя
+        m_lock_btn->disconnect();
+        connect(m_lock_btn, &QPushButton::clicked, this, &LayerWidget::layerClicked);
+    } else {
+        m_lock_btn->setText("L");
+        m_lock_btn->setStyleSheet("");
+        m_lock_btn->setCheckable(true);
+
+        // Возвращаем стандартное поведение замка для обычного слоя
+        m_lock_btn->disconnect();
+        connect(m_lock_btn, &QPushButton::toggled, this, &LayerWidget::onLockedToggled);
+    }
+}
+
 void LayerWidget::paintEvent(QPaintEvent *) {
     QStyleOption opt; opt.initFrom(this);
     QPainter p(this);
@@ -93,7 +113,15 @@ LayersPannel::LayersPannel(QWidget *parent, Canvas* canvas) : QWidget(parent), m
 
     m_new_layer_btn = new QPushButton("+");
     m_new_layer_btn->setFixedSize(BTN_SIZE + 10, BTN_SIZE + 5);
-    m_main_layout->addWidget(m_new_layer_btn);
+
+    m_new_filter_btn = new QPushButton("fx");
+    m_new_filter_btn->setFixedSize(BTN_SIZE + 10, BTN_SIZE + 5);
+
+    QHBoxLayout* top_btns = new QHBoxLayout();
+    top_btns->addWidget(m_new_layer_btn);
+    top_btns->addWidget(m_new_filter_btn);
+    top_btns->addStretch();
+    m_main_layout->addLayout(top_btns);
 
     m_scroll_area = new QScrollArea(this);
     m_scroll_area->setWidgetResizable(true);
@@ -109,6 +137,7 @@ LayersPannel::LayersPannel(QWidget *parent, Canvas* canvas) : QWidget(parent), m
     m_main_layout->addWidget(m_scroll_area);
 
     connect(m_new_layer_btn, &QPushButton::clicked, this, &LayersPannel::onNewLayerClicked);
+    connect(m_new_filter_btn, &QPushButton::clicked, this, &LayersPannel::onNewFilterClicked);
     updateLayers();
 }
 
@@ -125,6 +154,7 @@ void LayersPannel::updateLayers() {
         lw->setName(i->name);
         int index = info.size() - int(i - info.crbegin() + 1);
         lw->setIndex(index);
+        lw->setIsFilter(i->isFilter);
         lw->setVisibleState(i->visible);
         lw->setLockedState(i->locked);
 
@@ -165,7 +195,10 @@ void LayersPannel::onLayerDeleteClicked() {
     }
 }
 
-void LayersPannel::onNewLayerClicked() { m_canvas_ptr->newLayer(); updateLayers(); }
+void LayersPannel::onNewLayerClicked() {
+    m_canvas_ptr->newLayer();
+    updateLayers();
+}
 
 void LayersPannel::onLayerUpClicked() {
     LayerWidget* sender_layer = qobject_cast<LayerWidget*>(sender());
@@ -197,4 +230,9 @@ void LayersPannel::onLayerNameChanged(const QString& newName) {
     if (sender_layer && m_canvas_ptr) {
         m_canvas_ptr->renameLayer(sender_layer->getIndex(), newName);
     }
+}
+
+void LayersPannel::onNewFilterClicked() {
+    m_canvas_ptr->newFilterLayer();
+    updateLayers();
 }

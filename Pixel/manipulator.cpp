@@ -81,7 +81,6 @@ void TransformBox::paint(QPainter *painter, const QStyleOptionGraphicsItem *opti
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing);
 
-    // Рисуем рамку и соединительную линию. Толщина = 0 означает толщину 1px визуально
     painter->setPen(QPen(Qt::blue, 0, Qt::DashLine));
     painter->setBrush(Qt::NoBrush);
     painter->drawRect(targetRect());
@@ -122,6 +121,7 @@ void TransformBox::mousePressEvent(QGraphicsSceneMouseEvent *event)
     else { m_state = None; event->ignore(); return; }
 
     event->accept();
+    emit interactionStarted();
 }
 
 void TransformBox::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
@@ -196,6 +196,7 @@ void TransformBox::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
             m_undo_stack->push(new ModifyImageCommand(img, startState, img->getState()));
         }
         m_state = None;
+        emit interactionEnded();
     } else {
         event->ignore();
     }

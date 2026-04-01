@@ -80,6 +80,15 @@ void ProjectManager::saveToJson(const QString& path) {
         lObj["name"] = l->getName();
         lObj["visible"] = l->isVisible();
         lObj["locked"] = l->isLocked();
+        lObj["isFilter"] = l->isFilter();
+
+        if (l->isFilter()) {
+            FilterLayer* fl = static_cast<FilterLayer*>(l);
+            FilterState s = fl->getFilterState();
+            lObj["f_type"] = static_cast<int>(s.type);
+            lObj["f_p1"] = s.param1;
+            lObj["f_p2"] = s.param2;
+        }
 
         QJsonArray objsArr;
         for (Object* o : l->getObjects()) {
@@ -147,7 +156,21 @@ void ProjectManager::loadFromJson(const QString& path) {
     QJsonArray layersArr = doc.object()["layers"].toArray();
     for (int i = 0; i < layersArr.size(); ++i) {
         QJsonObject lObj = layersArr[i].toObject();
-        Layer* l = new Layer(lObj["name"].toString());
+        bool isFilter = lObj["isFilter"].toBool(false);
+        Layer* l = nullptr;
+
+        if (isFilter) {
+            FilterLayer* fl = new FilterLayer(lObj["name"].toString());
+            FilterState fs;
+            fs.type = static_cast<FilterType>(lObj["f_type"].toInt(0));
+            fs.param1 = lObj["f_p1"].toDouble(0);
+            fs.param2 = lObj["f_p2"].toDouble(0);
+            fl->setFilterState(fs);
+            l = fl;
+        } else {
+            l = new Layer(lObj["name"].toString());
+        }
+
         l->setVisible(lObj["visible"].toBool(true));
         canvas->addLayer(l);
 
@@ -198,6 +221,7 @@ void ProjectManager::loadFromJson(const QString& path) {
 
     m_current_file_path = path;
     canvas->renderCanvas();
+    canvas->updateFilters();
     emit projectLoaded();
     emit layersUpdated();
 }
