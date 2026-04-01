@@ -6,11 +6,20 @@
 #include <QLineF>
 #include <qmath.h>
 
-TransformBox::TransformBox(QGraphicsItem *parent, QUndoStack* undoStack)
-    : QGraphicsObject(parent), m_undo_stack(undoStack)
+TransformBox::TransformBox(QGraphicsItem *target, QUndoStack* undoStack)
+    : QGraphicsObject(nullptr), m_undo_stack(undoStack), m_target(target)
 {
-    setZValue(1000);
+    // Отрисовываем ПОВЕРХ всего на сцене, включая фильтры!
+    setZValue(10000);
     setFlag(ItemIsSelectable, false);
+    syncPosition();
+}
+
+void TransformBox::syncPosition() {
+    if (m_target) {
+        setPos(m_target->scenePos());
+        setRotation(m_target->rotation());
+    }
 }
 
 void TransformBox::setViewScale(qreal scale) {
@@ -20,9 +29,9 @@ void TransformBox::setViewScale(qreal scale) {
 }
 
 QRectF TransformBox::targetRect() const {
-    Object* obj = dynamic_cast<Object*>(parentItem());
+    Object* obj = dynamic_cast<Object*>(m_target);
     if (obj) return obj->getLocalRect();
-    return parentItem() ? parentItem()->boundingRect() : QRectF();
+    return m_target ? m_target->boundingRect() : QRectF();
 }
 
 void getScaleFromMatrix(const QTransform& t, qreal& sx, qreal& sy) {
@@ -32,7 +41,8 @@ void getScaleFromMatrix(const QTransform& t, qreal& sx, qreal& sy) {
 }
 
 QRectF TransformBox::boundingRect() const {
-    qreal sx, sy; getScaleFromMatrix(parentItem()->sceneTransform(), sx, sy);
+    if (!m_target) return QRectF();
+    qreal sx, sy; getScaleFromMatrix(m_target->sceneTransform(), sx, sy);
     qreal actualSx = sx * m_view_scale;
     qreal actualSy = sy * m_view_scale;
 
@@ -47,7 +57,7 @@ QRectF TransformBox::handleRect(int xPos, int yPos) const {
     if (xPos == -1) x = rect.left(); else if (xPos == 1) x = rect.right();
     if (yPos == -1) y = rect.top(); else if (yPos == 1) y = rect.bottom();
 
-    qreal sx, sy; getScaleFromMatrix(parentItem()->sceneTransform(), sx, sy);
+    qreal sx, sy; getScaleFromMatrix(m_target->sceneTransform(), sx, sy);
     qreal actualSx = sx * m_view_scale;
     qreal actualSy = sy * m_view_scale;
     return QRectF(x - (5.0 / actualSx), y - (5.0 / actualSy), 10.0 / actualSx, 10.0 / actualSy);
@@ -55,7 +65,7 @@ QRectF TransformBox::handleRect(int xPos, int yPos) const {
 
 QRectF TransformBox::rotateHandle() const {
     QRectF rect = targetRect();
-    qreal sx, sy; getScaleFromMatrix(parentItem()->sceneTransform(), sx, sy);
+    qreal sx, sy; getScaleFromMatrix(m_target->sceneTransform(), sx, sy);
     qreal actualSx = sx * m_view_scale;
     qreal actualSy = sy * m_view_scale;
     return QRectF(rect.center().x() - (5.0 / actualSx), rect.top() - (25.0 / actualSy) - (5.0 / actualSy), 10.0 / actualSx, 10.0 / actualSy);
@@ -76,7 +86,7 @@ QPainterPath TransformBox::shape() const {
 void TransformBox::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     Q_UNUSED(option); Q_UNUSED(widget);
-    if (!parentItem()) return;
+    if (!m_target) return;
 
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing);
@@ -100,12 +110,12 @@ void TransformBox::paint(QPainter *painter, const QStyleOptionGraphicsItem *opti
 
 void TransformBox::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    if (!parentItem()) return;
+    if (!m_target) return;
 
-    m_start_pos = parentItem()->pos();
-    m_start_rotation = parentItem()->rotation();
+    m_start_pos = m_target->pos();
+    m_start_rotation = m_target->rotation();
     m_start_rect = targetRect();
-    m_initial_scene_transform = parentItem()->sceneTransform();
+    m_initial_scene_transform = m_target->sceneTransform();
 
     QPointF p = event->pos();
 
@@ -126,13 +136,19 @@ void TransformBox::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 void TransformBox::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
-    if (!parentItem() || m_state == None) { event->ignore(); return; }
+    if (!m_target || m_state == None) { event->ignore(); return; }
 
     if (m_state == Rotate) {
-        QPointF center = parentItem()->mapToScene(m_start_rect.center());
+        QPointF center = m_target->mapToScene(m_start_rect.center());
         QLineF startLine(center, m_initial_scene_transform.map(rotateHandle().center()));
         QLineF currentLine(center, event->scenePos());
-        parentItem()->setRotation(m_start_rotation - startLine.angleTo(currentLine));
+
+        qreal newRot = m_start_rotation - startLine.angleTo(currentLine);
+        while (newRot < -360.0) newRot += 360.0;
+        while (newRot > 360.0) newRot -= 360.0;
+
+        m_target->setRotation(newRot);
+        syncPosition();
     }
     else {
         QPointF localMouse = m_initial_scene_transform.inverted().map(event->scenePos());
@@ -161,12 +177,11 @@ void TransformBox::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         QRectF centeredRect = rawNewRect.translated(-center);
         QPointF newPos = m_initial_scene_transform.map(center);
 
-        Object* obj = dynamic_cast<Object*>(parentItem());
+        Object* obj = dynamic_cast<Object*>(m_target);
         if (obj) {
-            prepareGeometryChange();
-
             obj->setLocalRect(centeredRect);
             obj->setPos(newPos);
+            syncPosition();
         }
     }
 }
@@ -174,21 +189,21 @@ void TransformBox::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 void TransformBox::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     if (m_state != None) {
-        if (Figure* fig = dynamic_cast<Figure*>(parentItem())) {
+        if (Figure* fig = dynamic_cast<Figure*>(m_target)) {
             FigureState startState = fig->getState();
             startState.pos = m_start_pos;
             startState.rot = m_start_rotation;
             startState.rect = m_start_rect;
             m_undo_stack->push(new ModifyFigureCommand(fig, startState, fig->getState()));
         }
-        else if (TextObject* txt = dynamic_cast<TextObject*>(parentItem())) {
+        else if (TextObject* txt = dynamic_cast<TextObject*>(m_target)) {
             TextState startState = txt->getState();
             startState.pos = m_start_pos;
             startState.rot = m_start_rotation;
             startState.rect = m_start_rect;
             m_undo_stack->push(new ModifyTextCommand(txt, startState, txt->getState()));
         }
-        else if (ImageObject* img = dynamic_cast<ImageObject*>(parentItem())) {
+        else if (ImageObject* img = dynamic_cast<ImageObject*>(m_target)) {
             ImageState startState = img->getState();
             startState.pos = m_start_pos;
             startState.rot = m_start_rotation;

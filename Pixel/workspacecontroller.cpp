@@ -10,10 +10,10 @@
 #include <QUrl>
 #include <QInputDialog>
 
-WorkspaceController::WorkspaceController(const WorkspaceContext& ctx, QObject* parent)
+    WorkspaceController::WorkspaceController(const WorkspaceContext& ctx, QObject* parent)
     : QObject(parent), m_view(ctx.view), m_project_manager(ctx.projectManager),
-    m_context_pannel(ctx.contextPannel), m_palette_pannel(ctx.palettePannel),
-    m_layers_pannel(ctx.layersPannel), m_last_mouse_scene_pos(0,0)
+m_context_pannel(ctx.contextPannel), m_palette_pannel(ctx.palettePannel),
+m_layers_pannel(ctx.layersPannel), m_last_mouse_scene_pos(0,0)
 {
     m_undo_stack = new QUndoStack(this);
     if (m_view) {
@@ -69,7 +69,10 @@ void WorkspaceController::updateTransformBoxScale() {
 
 void WorkspaceController::clearTransformBox() {
     if (m_transform_box) {
-        m_transform_box->deleteLater();
+        if (m_transform_box->scene()) {
+            m_transform_box->scene()->removeItem(m_transform_box);
+        }
+        delete m_transform_box; // НЕМЕДЛЕННОЕ удаление убивает "призрачные" рамки выделения
         m_transform_box = nullptr;
     }
 }
@@ -84,14 +87,12 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
             if (kEvent->key() == Qt::Key_Z) { m_view->scene()->clearSelection(); m_undo_stack->undo(); return true; }
             if (kEvent->key() == Qt::Key_Y) { m_view->scene()->clearSelection(); m_undo_stack->redo(); return true; }
 
-            // Копирование
             if (kEvent->key() == Qt::Key_C) {
                 if (m_selected_figure) { m_clipboard_figure = m_selected_figure->getState(); m_clipboard_type = ClipboardType::Figure; }
                 else if (m_selected_text) { m_clipboard_text = m_selected_text->getState(); m_clipboard_type = ClipboardType::Text; }
                 else if (m_selected_image) { m_clipboard_image = m_selected_image->getState(); m_clipboard_type = ClipboardType::Image; }
                 QApplication::clipboard()->clear(); return true;
             }
-            // Вырезка
             if (kEvent->key() == Qt::Key_X) {
                 if (m_selected_figure) {
                     m_clipboard_figure = m_selected_figure->getState(); m_clipboard_type = ClipboardType::Figure;
@@ -105,15 +106,14 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
                 }
                 QApplication::clipboard()->clear(); return true;
             }
-            // Вставка
-            if (kEvent->key() == Qt::Key_V && canvas) {
+            if (kEvent->key() == Qt::Key_V && !kEvent->isAutoRepeat() && canvas) {
                 int activeId = canvas->getSelectedLayerid();
-                if (activeId >= 0 && !canvas->getLayersInfo()[activeId].locked) {
+                // Запрещаем вставку объектов на закрытые слои и слои-фильтры
+                if (activeId >= 0 && !canvas->getLayersInfo()[activeId].locked && !canvas->getLayersInfo()[activeId].isFilter) {
                     const QClipboard *clipboard = QApplication::clipboard();
                     const QMimeData *mimeData = clipboard->mimeData();
                     QImage img;
 
-                    // 1. Приоритет системного буфера обмена (внешнее копирование картинки)
                     if (mimeData->hasImage()) {
                         img = qvariant_cast<QImage>(mimeData->imageData());
                     } else if (mimeData->hasUrls()) {
@@ -137,7 +137,6 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
                         return true;
                     }
 
-                    // 2. Вставка нашего внутреннего скопированного объекта
                     if (m_clipboard_type != ClipboardType::None) {
                         m_view->scene()->clearSelection();
                         if (m_clipboard_type == ClipboardType::Figure) {
@@ -170,7 +169,6 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
             return true;
         }
 
-        // Перемещение стрелочками (Nudge)
         if (kEvent->key() == Qt::Key_Up || kEvent->key() == Qt::Key_Down || kEvent->key() == Qt::Key_Left || kEvent->key() == Qt::Key_Right) {
             if ((m_selected_figure || m_selected_text) && !m_space_pressed) {
                 qreal step = 1.0 / m_view->transform().m11();
@@ -213,7 +211,6 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
         }
     }
 
-    // Обработка Drag & Drop
     if (event->type() == QEvent::DragEnter || event->type() == QEvent::DragMove) {
         QDragMoveEvent *dEvent = static_cast<QDragMoveEvent*>(event);
         if (dEvent->mimeData()->hasImage() || dEvent->mimeData()->hasUrls()) {
@@ -224,7 +221,8 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
     if (event->type() == QEvent::Drop) {
         QDropEvent *dEvent = static_cast<QDropEvent*>(event);
         int activeId = canvas ? canvas->getSelectedLayerid() : -1;
-        if (canvas && activeId >= 0 && !canvas->getLayersInfo()[activeId].locked) {
+        // Запрещаем Drag&Drop объектов на закрытые слои и слои-фильтры
+        if (canvas && activeId >= 0 && !canvas->getLayersInfo()[activeId].locked && !canvas->getLayersInfo()[activeId].isFilter) {
             QImage img;
             if (dEvent->mimeData()->hasImage()) {
                 img = qvariant_cast<QImage>(dEvent->mimeData()->imageData());
@@ -288,15 +286,13 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
 
         if (event->type() == QEvent::MouseButtonPress) {
             QMouseEvent *mEvent = static_cast<QMouseEvent *>(event);
-            if (m_is_drawing) {
-                if (canvas) canvas->setFiltersInteractionActive(false);
-            }
             if ((mEvent->button() == Qt::LeftButton && (m_space_pressed || m_current_tool == InstrumentType::HAND)) || mEvent->button() == Qt::MiddleButton) {
                 m_is_panning = true; m_last_pan_pos = mEvent->pos(); m_view->setCursor(Qt::ClosedHandCursor); return true;
             }
             if (mEvent->button() == Qt::LeftButton && m_current_tool == InstrumentType::FIGURE && canvas) {
                 int activeId = canvas->getSelectedLayerid();
-                if (activeId >= 0 && !canvas->getLayersInfo()[activeId].locked) {
+                // Запрещаем рисование на закрытом слое или слое-фильтре
+                if (activeId >= 0 && !canvas->getLayersInfo()[activeId].locked && !canvas->getLayersInfo()[activeId].isFilter) {
                     m_is_drawing = true; m_draw_start_pos = m_view->mapToScene(mEvent->pos());
                     m_view->scene()->clearSelection();
                     m_temp_figure = new Figure();
@@ -309,7 +305,7 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
             }
             if (mEvent->button() == Qt::LeftButton && m_current_tool == InstrumentType::TEXT && canvas) {
                 int activeId = canvas->getSelectedLayerid();
-                if (activeId >= 0 && !canvas->getLayersInfo()[activeId].locked) {
+                if (activeId >= 0 && !canvas->getLayersInfo()[activeId].locked && !canvas->getLayersInfo()[activeId].isFilter) {
                     m_is_drawing = true; m_draw_start_pos = m_view->mapToScene(mEvent->pos());
                     m_view->scene()->clearSelection();
                     m_temp_text = new TextObject();
@@ -323,23 +319,32 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
                 return true;
             }
 
-
             if (mEvent->button() == Qt::LeftButton && m_current_tool == InstrumentType::POINTER) {
-                Object* targetObj = nullptr;
 
-                // Пробиваем курсором все слои, игнорируем рамку выделения и слой-фильтр
+                bool clickedTransformBox = false;
                 for (QGraphicsItem* it : m_view->items(mEvent->pos())) {
-                    if (it->zValue() >= 1000) continue; // Игнорируем ручки TransformBox
+                    if (dynamic_cast<TransformBox*>(it)) {
+                        clickedTransformBox = true;
+                        break;
+                    }
+                }
 
+                if (clickedTransformBox) {
+                    return QObject::eventFilter(obj, event);
+                }
+
+                Object* targetObj = nullptr;
+                for (QGraphicsItem* it : m_view->items(mEvent->pos())) {
                     targetObj = dynamic_cast<Object*>(it);
                     if (!targetObj && it->parentItem()) targetObj = dynamic_cast<Object*>(it->parentItem());
-
-                    if (targetObj) break; // Нашли первый реальный объект (Фигуру, Текст или Картинку)
+                    if (targetObj) break;
                 }
 
                 if (targetObj) {
-                    m_view->scene()->clearSelection();
-                    targetObj->setSelected(true);
+                    if (!targetObj->isSelected()) {
+                        m_view->scene()->clearSelection();
+                        targetObj->setSelected(true);
+                    }
                 } else {
                     m_view->scene()->clearSelection();
                 }
@@ -355,17 +360,16 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
                 ImageObject* img = dynamic_cast<ImageObject*>(targetObj);
                 if (img) { m_drag_target_image = img; m_drag_start_image_state = img->getState(); }
                 else { m_drag_target_image = nullptr; }
-
-                // Если схватили объект, временно отключаем (прячем) фильтры
-                if ((m_drag_target || m_drag_target_text || m_drag_target_image) && (!m_transform_box || !m_transform_box->isInteracting())) {
-                    if (canvas) canvas->setFiltersInteractionActive(false);
-                }
             }
         }
 
         if (event->type() == QEvent::MouseMove) {
             QMouseEvent *mEvent = static_cast<QMouseEvent *>(event);
             m_last_mouse_scene_pos = m_view->mapToScene(mEvent->pos());
+
+            if (m_transform_box && !m_transform_box->isInteracting()) {
+                m_transform_box->syncPosition();
+            }
 
             if (m_is_panning) {
                 QPoint delta = mEvent->pos() - m_last_pan_pos;
@@ -392,10 +396,6 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
         if (event->type() == QEvent::MouseButtonRelease) {
             QMouseEvent *mEvent = static_cast<QMouseEvent *>(event);
             if (m_is_panning) { m_is_panning = false; setCurrentTool(m_current_tool); return true; }
-
-            if (m_is_drawing || m_drag_target || m_drag_target_text || m_drag_target_image) {
-                if (canvas) canvas->setFiltersInteractionActive(true);
-            }
 
             if (m_is_drawing && mEvent->button() == Qt::LeftButton) {
                 m_is_drawing = false;
@@ -465,6 +465,10 @@ bool WorkspaceController::eventFilter(QObject *obj, QEvent *event) {
 }
 
 void WorkspaceController::onSelectionChanged() {
+    // Предотвращаем рекурсивный вызов создания дубликатов TransformBox
+    if (m_updating_selection) return;
+    m_updating_selection = true;
+
     clearTransformBox();
     QList<QGraphicsItem*> selected = m_view->scene()->selectedItems();
     Canvas* canvas = m_project_manager->GetCurrentCanvas();
@@ -476,6 +480,7 @@ void WorkspaceController::onSelectionChanged() {
         int layerId = canvas->getLayerIdOfObject(obj);
         if (layerId != -1 && canvas->getLayersInfo()[layerId].locked) {
             item->setSelected(false);
+            m_updating_selection = false;
             return;
         }
 
@@ -488,13 +493,20 @@ void WorkspaceController::onSelectionChanged() {
         m_selected_text = dynamic_cast<TextObject*>(obj);
         m_selected_image = dynamic_cast<ImageObject*>(obj);
 
-
-
         if (m_selected_figure || m_selected_text || m_selected_image) {
-            m_transform_box = new TransformBox(item, m_undo_stack);
+            // Отключаем фильтры если выделен любой объект, это решает
+            // проблему их наслоения поверх выделения и запекания TransformBox в фильтрах.
+            canvas->setFiltersInteractionActive(false);
 
-            connect(m_transform_box, &TransformBox::interactionStarted, this, [canvas]() { canvas->setFiltersInteractionActive(false); });
-            connect(m_transform_box, &TransformBox::interactionEnded, this, [canvas]() { canvas->setFiltersInteractionActive(true); });
+            m_transform_box = new TransformBox(item, m_undo_stack);
+            m_view->scene()->addItem(m_transform_box);
+
+            // Теперь мы прикрепляем обновление ContextPannel на событие окончания взаимодействия с Transform Box
+            connect(m_transform_box, &TransformBox::interactionEnded, this, [this]() {
+                if (m_selected_figure) m_context_pannel->setTarget(m_selected_figure);
+                else if (m_selected_text) m_context_pannel->setTarget(m_selected_text);
+                else if (m_selected_image) m_context_pannel->setTarget(m_selected_image);
+            });
 
             updateTransformBoxScale();
 
@@ -508,7 +520,10 @@ void WorkspaceController::onSelectionChanged() {
         m_selected_figure = nullptr;
         m_selected_text = nullptr;
         m_selected_image = nullptr;
-        m_context_pannel->setTarget(static_cast<Figure*>(nullptr)); // Сброс UI
+        m_context_pannel->setTarget(static_cast<Figure*>(nullptr));
+
+        // Включаем фильтры обратно если нет выделенного объекта
+        if (canvas) canvas->setFiltersInteractionActive(true);
     }
 
     m_context_pannel->setMode(
@@ -518,6 +533,8 @@ void WorkspaceController::onSelectionChanged() {
         m_current_tool == InstrumentType::TEXT,
         getToolName(m_current_tool)
         );
+
+    m_updating_selection = false;
 }
 
 void WorkspaceController::onMoveObjectLayerRequested(int shift) {
@@ -549,7 +566,6 @@ void WorkspaceController::onMoveObjectLayerRequested(int shift) {
 }
 
 void WorkspaceController::onContextPropertyChanged() {
-
     Canvas* canvas = m_project_manager->GetCurrentCanvas();
     if (canvas && canvas->getSelectedLayerid() >= 0) {
         Layer* activeLayer = canvas->getLayers()[canvas->getSelectedLayerid()];
@@ -584,6 +600,7 @@ void WorkspaceController::onContextPropertyChanged() {
         if (oldState != newState) {
             m_undo_stack->push(new ModifyImageCommand(m_selected_image, oldState, newState));
             m_context_pannel->setTarget(m_selected_image);
+            if (m_transform_box) m_transform_box->syncPosition();
         }
     }
 }
@@ -595,19 +612,17 @@ void WorkspaceController::onColorTargetChanged(bool isFill) {
 
 void WorkspaceController::onColorPickedPreview(const QColor& color) {
     if (m_selected_figure) {
-        if (!m_selected_figure) {
-            if (!m_is_previewing) { m_state_before_preview = m_selected_figure->getState(); m_is_previewing = true; }
-            FigureState s = m_selected_figure->getState();
-            if (m_color_target_is_fill) s.fill = color; else s.stroke = color;
-            m_selected_figure->setState(s);
-        } else if (m_selected_text) {
-            if (!m_is_previewing) { m_text_state_before_preview = m_selected_text->getState(); m_is_previewing = true; }
-            TextState s = m_selected_text->getState();
-            s.color = color;
-            m_selected_text->setState(s);
-        } else {
-            m_context_pannel->setDefaultColor(m_color_target_is_fill, color);
-        }
+        if (!m_is_previewing) { m_state_before_preview = m_selected_figure->getState(); m_is_previewing = true; }
+        FigureState s = m_selected_figure->getState();
+        if (m_color_target_is_fill) s.fill = color; else s.stroke = color;
+        m_selected_figure->setState(s);
+    } else if (m_selected_text) {
+        if (!m_is_previewing) { m_text_state_before_preview = m_selected_text->getState(); m_is_previewing = true; }
+        TextState s = m_selected_text->getState();
+        s.color = color;
+        m_selected_text->setState(s);
+    } else {
+        m_context_pannel->setDefaultColor(m_color_target_is_fill, color);
     }
 }
 
@@ -653,10 +668,9 @@ void WorkspaceController::onActiveLayerChanged(int id) {
         m_context_pannel->setTarget(filter);
         m_context_pannel->setMode(false, false, false, false, "Filter Properties");
     } else {
-        // ИСПРАВЛЕНИЕ: Возвращаем UI в нормальное состояние при уходе со слоя-фильтра
         m_context_pannel->setTarget(static_cast<Figure*>(nullptr));
-        setCurrentTool(m_current_tool); // Возвращаем UI под текущий инструмент
-        onSelectionChanged(); // Принудительно проверяем, выделен ли объект на текущем слое
+        setCurrentTool(m_current_tool);
+        onSelectionChanged();
     }
 }
 
@@ -673,6 +687,9 @@ void WorkspaceController::clearState() {
     m_selected_text = nullptr;
     m_temp_text = nullptr;
     m_drag_target_text = nullptr;
+
+    m_selected_image = nullptr;
+    m_drag_target_image = nullptr;
 
     m_has_clipboard = false;
     m_is_drawing = false;

@@ -3,12 +3,12 @@
 
 Canvas::Canvas(QObject* parent)
     : QObject(parent),
-    m_parent_sceene(nullptr),
-    m_selected(nullptr),
-    m_selected_index(-1),
-    m_canvas_size(800, 600),
-    m_bg_item(nullptr),
-    m_layer_counter(1) {}
+m_parent_sceene(nullptr),
+m_selected(nullptr),
+m_selected_index(-1),
+m_canvas_size(800, 600),
+m_bg_item(nullptr),
+m_layer_counter(1) {}
 
 void Canvas::addLayer(Layer* layer) {
     if (!layer)
@@ -81,6 +81,7 @@ void Canvas::moveLayer(int id, int shift) {
         m_selected_index = id;
     m_selected = m_layers[m_selected_index];
     renderCanvas();
+    updateFilters();
 }
 
 void Canvas::selectLayer(int id) {
@@ -91,8 +92,10 @@ void Canvas::selectLayer(int id) {
 }
 
 void Canvas::setLayerVisible(int id, bool visible) {
-    if (ID_IN_BOUNDS(id))
+    if (ID_IN_BOUNDS(id)) {
         m_layers[id]->setVisible(visible);
+        updateFilters();
+    }
 }
 
 void Canvas::setLayerLocked(int id, bool locked) {

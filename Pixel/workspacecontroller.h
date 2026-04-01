@@ -16,7 +16,7 @@
 #include "layerspannel.h"
 #include "manipulator.h"
 
-struct WorkspaceContext {
+    struct WorkspaceContext {
     QGraphicsView* view;
     QGraphicsScene* scene;
     ProjectManager* projectManager;
@@ -99,6 +99,9 @@ private:
     TextState m_text_state_before_preview;
     TextState m_clipboard_text_state;
     bool m_clipboard_is_text = false;
+
+    // Флаг для предотвращения рекурсивного создания TransformBox
+    bool m_updating_selection = false;
 };
 
 #endif // WORKSPACECONTROLLER_H

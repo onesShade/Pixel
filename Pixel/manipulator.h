@@ -10,7 +10,7 @@ class TransformBox : public QGraphicsObject
 {
     Q_OBJECT
 public:
-    explicit TransformBox(QGraphicsItem *parent, QUndoStack* undoStack);
+    explicit TransformBox(QGraphicsItem *target, QUndoStack* undoStack);
 
     QRectF targetRect() const;
     QRectF boundingRect() const override;
@@ -19,6 +19,7 @@ public:
 
     bool isInteracting() const { return m_state != None; }
     void setViewScale(qreal scale);
+    void syncPosition();
 
 signals:
     void interactionStarted();
@@ -31,6 +32,7 @@ protected:
 
 private:
     QUndoStack* m_undo_stack;
+    QGraphicsItem* m_target; // Теперь ссылаемся на цель, а не на parentItem
 
     enum InteractionState {
         None, Rotate,
